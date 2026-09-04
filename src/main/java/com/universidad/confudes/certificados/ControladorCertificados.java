@@ -7,20 +7,23 @@ import org.springframework.http.ResponseEntity;
 @RequestMapping("/api/certificados")
 public class ControladorCertificados {
 
-    // Se instancia la fachada para procesar las solicitudes de certificados
-    private final EmisionCertificadoFacade facade;
+    private final ServicioCertificados servicio; // <-- Depende de la interfaz
 
-    public ControladorCertificados(EmisionCertificadoFacade facade) {
-        this.facade = facade;
+    public ControladorCertificados(ServicioCertificados servicio) {
+        this.servicio = servicio;
     }
 
     @PostMapping("/{eventoId}/{participanteId}")
     public ResponseEntity<String> emitir(@PathVariable String eventoId, @PathVariable String participanteId,
                                          @RequestParam String nombre, @RequestParam String correoDestino) {
         
-        boolean exito = facade.emitirCertificado(eventoId, participanteId, nombre, correoDestino);
+        SolicitudCertificado solicitud = new SolicitudCertificado(eventoId, participanteId, nombre, correoDestino);
         
-        return exito ? ResponseEntity.ok("Certificado emitido y enviado")
-                     : ResponseEntity.status(403).body("Asistencia insuficiente");
+        try {
+            servicio.emitir(solicitud);
+            return ResponseEntity.ok("Certificado emitido y enviado");
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("Asistencia insuficiente");
+        }
     }
 }

@@ -12,11 +12,11 @@ class EmisionCertificadoTest {
         var firma = new FirmaDigitalService();
         var correo = new EnvioCorreoService();
         
-        // <-- Tu Fachada orquestando todo
-        EmisionCertificadoFacade colaborador = new EmisionCertificadoFacade(validador, generador, firma, correo);
+        ServicioCertificados colaborador = new EmisionCertificadoFacade(validador, generador, firma, correo);
+        SolicitudCertificado solicitud = new SolicitudCertificado("EVT-001", "PART-123", "Ana Rios", "ana@correo.com");
 
         assertDoesNotThrow(() -> {
-            colaborador.emitirCertificado("EVT-001", "PART-123", "Ana Rios", "ana@correo.com");
+            colaborador.emitir(solicitud);
         });
     }
 

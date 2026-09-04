@@ -3,14 +3,13 @@ package com.universidad.confudes.certificados;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmisionCertificadoFacade {
+public class EmisionCertificadoFacade implements ServicioCertificados { // <-- Se implementa la interfaz
     
     private final ValidadorAsistencia validador;
     private final GeneradorCertificadoPDF generador;
     private final FirmaDigitalService firma;
     private final EnvioCorreoService correo;
 
-    // Inyección de dependencias de los servicios requeridos para el proceso
     public EmisionCertificadoFacade(ValidadorAsistencia validador, GeneradorCertificadoPDF generador,
                                     FirmaDigitalService firma, EnvioCorreoService correo) {
         this.validador = validador;
@@ -19,23 +18,23 @@ public class EmisionCertificadoFacade {
         this.correo = correo;
     }
 
-    // Coordinación del proceso completo para la emisión y envío del certificado
-    public boolean emitirCertificado(String eventoId, String participanteId, String nombre, String correoDestino) {
-        if (!validador.tieneAsistenciaMinima(participanteId, eventoId, 0.8)) {
-            return false;
+    @Override
+    public byte[] emitir(SolicitudCertificado solicitud) {
+        if (!validador.tieneAsistenciaMinima(solicitud.getParticipanteId(), solicitud.getEventoId(), 0.8)) {
+            throw new SecurityException("Asistencia insuficiente");
         }
 
         byte[] doc = generador.iniciarDocumento("plantilla-2026");
-        generador.insertarDatosParticipante(doc, nombre, eventoId, "2026-08-06");
+        generador.insertarDatosParticipante(doc, solicitud.getNombre(), solicitud.getEventoId(), "2026-08-06");
         byte[] documentoFinal = generador.finalizarDocumento();
 
         FirmaDigitalService.Sesion sesion = firma.abrirSesion("cert-udes-2026.pfx");
         byte[] documentoFirmado = firma.firmar(sesion, documentoFinal);
         firma.cerrarSesion(sesion);
 
-        correo.adjuntarArchivo(correoDestino, documentoFirmado, "certificado-" + participanteId + ".pdf");
+        correo.adjuntarArchivo(solicitud.getCorreoDestino(), documentoFirmado, "certificado-" + solicitud.getParticipanteId() + ".pdf");
         correo.enviar("Su certificado de participación", "Adjunto encontrará su certificado.");
 
-        return true;
+        return documentoFirmado;
     }
 }
